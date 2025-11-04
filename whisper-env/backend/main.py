@@ -1,38 +1,44 @@
 import whisper
 import os
-import tkinter as tk
+import ttkbootstrap as ttk
+import sounddevice as sd
+import time
+import tkinter.simpledialog as sdialog
+from ttkbootstrap.constants import *
 from tkinter import filedialog, messagebox
+from tkinter.scrolledtext import ScrolledText
+from scipy.io.wavfile import write
 
 model = whisper.load_model("base")
 
 def browse_file():
-	"""Open a file dialog to select an audio file."""
+	# Open file dialog to select audio file
 	filename = filedialog.askopenfilename(
 		title = "Select audio file",
 		filetypes=[("Audio Files", "*.mp3 *.wav *.m4a *.flac *.ogg *.mp4")]
 	)
 	if filename:
-		entry.delete(0, tk.END)
+		entry.delete(0, END)
 		entry.insert(0, filename)
 
 def transcribe():
-	"""Transcribe the selected audio file using Whisper."""
+	# Transcribe selected audio file using Whisper
 	file_path = entry.get()
 	if not file_path or not os.path.isfile(file_path):
 		messagebox.showerror("Error", "No valid file selected")
 		return
 
 	try:
-		transcribe_btn.config(state=tk.DISABLED)
-		text_box.delete(1.0, tk.END)
-		text_box.insert(tk.END, "Transcribing, please wait...\n")
+		transcribe_btn.config(state=DISABLED)
+		text_box.delete(1.0, END)
+		text_box.insert(END, "Transcribing, please wait...\n")
 		root.update()
 
 		result = model.transcribe(file_path)
 		transcription = result.get("text", "")
 
-		text_box.delete(1.0, tk.END)
-		text_box.insert(tk.END, transcription)
+		text_box.delete(1.0, END)
+		text_box.insert(END, transcription)
 
 		save_path = os.path.join(os.path.dirname(file_path), "transcription.txt")
 		with open(save_path, "w", encoding="utf-8") as f:
@@ -43,25 +49,58 @@ def transcribe():
 		messagebox.showerror("Error",f"Transcription failed:\n{e}")
 
 	finally:
-		transcribe_btn.config(state=tk.NORMAL)
+		transcribe_btn.config(state=NORMAL)
 
-root = tk.Tk()
+def record_audio(duration, filename="recorded_audio.wav"):
+	# Record audio + create recording file
+	fs = 44100
+	try:
+		text_box.insert("end", f"Recording for {duration} seconds...\n")
+		root.update()
+		recording = sd.rec(int(duration * fs), samplerate=fs, channels=1)
+		sd.wait()
+		write(filename, fs, recording)
+		text_box.insert("end",f"Recording saved as {filename}\n")
+		return filename
+	except Exception as e:
+		messagebox.showerror("Error",f"Recording failed:\n{e}")
+		return None
+
+def record():
+	# Prompt for duration and inialize recording
+	duration = sdialog.askinteger("Recording Duration", "Enter recording time in seconds (1-10):", minvalue=1, maxvalue=10)
+	if duration:
+		filename = os.path.join(os.getcwd(), "recorded_audio.wav")
+		recorded_file = record_audio(duration, filename)
+		if recorded_file:
+			entry.delete(0, "end")
+			entry.insert(0, recorded_file)
+			transcribe()
+
+root = ttk.Window(themename="cosmo")
 root.title("Whisper Transcriber")
 
-frame = tk.Frame(root)
-frame.pack(padx=10, pady=10)
+frame = ttk.Frame(root, padding=10)
+frame.pack(fill=BOTH, expand=True)
 
-entry = tk.Entry(frame, width=50)
+browse_frame = ttk.Frame(frame)
+browse_frame.grid(row=0, column=0, padx=5, pady=5)
+frame.columnconfigure(0, weight=1)
+
+entry = ttk.Entry(browse_frame, width=50)
 entry.grid(row=0, column=0, padx=5, pady=5)
 
-browse_btn = tk.Button(frame, text="Browse", command=browse_file)
+browse_btn = ttk.Button(browse_frame, text="Browse", bootstyle=PRIMARY, command=browse_file)
 browse_btn.grid(row=0, column=1, padx=5, pady=5)
 
-transcribe_btn = tk.Button(frame, text="Transcribe", command=transcribe, width=20)
+transcribe_btn = ttk.Button(frame, text="Transcribe", bootstyle=SUCCESS, command=transcribe, width=20)
 transcribe_btn.grid(row=1, column=0, columnspan=2, pady=10)
 
-text_box = tk.Text(root, height=15, width=70)
-text_box.pack(padx=10, pady=5)
+text_box = ScrolledText(root, height=15, width=70, wrap="word")
+text_box.pack(padx=10, pady=5, fill=BOTH, expand=True)
+
+record_btn = ttk.Button(frame, text="Record & Transcribe", bootstyle=INFO, command=record)
+record_btn.grid(row=2, column=0, columnspan=2, pady=10)
 
 if __name__ == "__main__":
 	root.mainloop()
