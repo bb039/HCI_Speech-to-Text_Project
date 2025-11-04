@@ -15,3 +15,13 @@ deployment were not so memory intensive for the project's dependencies. Possible
  - Dear PyGui
  - ttkbootstrap
  - CustomTkinter
+
+ Dependencies:
+ - PortAudio (Sys)
+ - ffmpeg (Sys)
+ - PyTorch (Python)
+ - OpenAI-Whisper (Python)
+ - TKinter (Python)
+ - TTKBootstrap (Python)
+ - SoundDevice (Python)
+ - scipy (Python)
