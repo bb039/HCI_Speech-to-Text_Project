@@ -40,10 +40,7 @@ def transcribe():
 		text_box.delete(1.0, END)
 		text_box.insert(END, transcription)
 
-		save_path = os.path.join(os.path.dirname(file_path), "transcription.txt")
-		with open(save_path, "w", encoding="utf-8") as f:
-			f.write(transcription)
-		messagebox.showinfo("Success", f"Transcription saved to:\n{save_path}")
+		save_btn.config(state=NORMAL)
 
 	except Exception as e:
 		messagebox.showerror("Error",f"Transcription failed:\n{e}")
@@ -77,6 +74,27 @@ def record():
 			entry.insert(0, recorded_file)
 			transcribe()
 
+def save_transcription():
+	# Save transcription after transcription preview
+	content = text_box.get("1.0", END).strip()
+
+	if not content:
+		messagebox.showerror("Error", "There is no transcription to save.")
+		return
+
+	save_path = filedialog.asksaveasfilename(
+		title="Save Transcription",
+		defaultextension=".txt",
+		filetypes=[("Text files",".txt")]
+	)
+
+	if save_path:
+		try:
+			with open(save_path, "w", encoding="utf-8") as f:
+				f.write(content)
+			messagebox.showinfo("Success",f"Transcription saved to:\n{save_path}")
+		except Exception as e:
+			messagebox.showerror("Error",f"Failed to save:\n{e}")
 root = ttk.Window(themename="cosmo")
 root.title("Whisper Transcriber")
 
@@ -98,6 +116,10 @@ transcribe_btn.grid(row=1, column=0, columnspan=2, pady=10)
 
 text_box = ScrolledText(root, height=15, width=70, wrap="word")
 text_box.pack(padx=10, pady=5, fill=BOTH, expand=True)
+
+save_btn = ttk.Button(root, text="Save Transcription", bootstyle=PRIMARY, command=save_transcription)
+save_btn.pack(pady=5)
+save_btn.config(state=DISABLED)
 
 record_btn = ttk.Button(frame, text="Record & Transcribe", bootstyle=INFO, command=record)
 record_btn.grid(row=2, column=0, columnspan=2, pady=10)
