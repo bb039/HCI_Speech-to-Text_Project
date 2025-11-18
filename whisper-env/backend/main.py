@@ -23,6 +23,8 @@ def browse_file():
 
 def transcribe():
 	# Transcribe selected audio file using Whisper
+	text_box.delete("1.0","end")
+
 	file_path = entry.get()
 	if not file_path or not os.path.isfile(file_path):
 		messagebox.showerror("Error", "No valid file selected")
@@ -65,6 +67,8 @@ def record_audio(duration, filename="recorded_audio.wav"):
 
 def record():
 	# Prompt for duration and inialize recording
+	text_box.delete("1.0","end")
+
 	duration = sdialog.askinteger("Recording Duration", "Enter recording time in seconds (1-10):", minvalue=1, maxvalue=10)
 	if duration:
 		filename = os.path.join(os.getcwd(), "recorded_audio.wav")
