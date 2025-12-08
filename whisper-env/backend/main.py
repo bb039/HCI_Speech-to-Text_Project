@@ -58,19 +58,27 @@ def record_toggle():
 	global is_recording, recorded_frames, stream
 
 	if not is_recording:
-		# Start recording
+		recorded_frames = []
+
+		# Select audio input device
+		device_index, max_channels = choose_input_devices()
+		if device_index is None:
+			return
+
+		# Begin recording
 		text_box.delete("1.0", END)
 		text_box.insert("end","Recording... Press again to stop.\n")
 		root.update()
 
-		recorded_frames = []
+		channels = min(1, max_channels) if max_channels >= 1 else max_channels
 
 		def callback(indata, frames, time, status):
 			recorded_frames.append(indata.copy())
 
 		stream = sd.InputStream(
+			device=device_index,
 			samplerate=44100,
-			channels=1,
+			channels=channels,
 			callback=callback
 		)
 		stream.start()
@@ -122,6 +130,34 @@ def save_transcription():
 			messagebox.showinfo("Success",f"Transcription saved to:\n{save_path}")
 		except Exception as e:
 			messagebox.showerror("Error",f"Failed to save:\n{e}")
+
+def get_input_devices():
+	devices = sd.query_devices()
+	input_devices = []
+
+	for idx, dev in enumerate(devices):
+		if dev["max_input_channels"] > 0:
+			input_devices.append((idx, dev["name"], dev["max_input_channels"]))
+	return input_devices
+
+def choose_input_devices():
+	devices = get_input_devices()
+
+	if not devices:
+		messagebox.showerror("Error", "No audio input devices detected.")
+		return None, None
+
+	devices_list = "\n".join([f"{idx}: {name} ({channels} channels)" for idx, name, channels in devices])
+
+	choice = sdialog.askinteger("Select Input Device", "Available microphones:\n\n" + devices_list + "\n\nEnter device index:", minvalue=0, maxvalue=len(sd.query_devices()) - 1)
+
+	if choice is None:
+		return None, None
+
+	device_info = sd.query_devices(choice)
+
+	return choice, device_info['max_input_channels']
+
 root = ttk.Window(themename="cosmo")
 root.title("Whisper Transcriber")
 
