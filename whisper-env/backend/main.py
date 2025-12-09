@@ -11,6 +11,10 @@ from scipy.io.wavfile import write
 
 model = whisper.load_model("base")
 
+is_recording = False
+recorded_frames = []
+stream = None
+
 def browse_file():
 	# Open file dialog to select audio file
 	filename = filedialog.askopenfilename(
@@ -50,33 +54,60 @@ def transcribe():
 	finally:
 		transcribe_btn.config(state=NORMAL)
 
-def record_audio(duration, filename="recorded_audio.wav"):
-	# Record audio + create recording file
-	fs = 44100
-	try:
-		text_box.insert("end", f"Recording for {duration} seconds...\n")
+def record_toggle():
+	global is_recording, recorded_frames, stream
+
+	if not is_recording:
+		recorded_frames = []
+
+		# Select audio input device
+		device_index, max_channels = choose_input_devices()
+		if device_index is None:
+			return
+
+		# Begin recording
+		text_box.delete("1.0", END)
+		text_box.insert("end","Recording... Press again to stop.\n")
 		root.update()
-		recording = sd.rec(int(duration * fs), samplerate=fs, channels=1)
-		sd.wait()
-		write(filename, fs, recording)
-		text_box.insert("end",f"Recording saved as {filename}\n")
-		return filename
-	except Exception as e:
-		messagebox.showerror("Error",f"Recording failed:\n{e}")
-		return None
 
-def record():
-	# Prompt for duration and inialize recording
-	text_box.delete("1.0","end")
+		channels = min(1, max_channels) if max_channels >= 1 else max_channels
 
-	duration = sdialog.askinteger("Recording Duration", "Enter recording time in seconds (1-10):", minvalue=1, maxvalue=10)
-	if duration:
+		def callback(indata, frames, time, status):
+			recorded_frames.append(indata.copy())
+
+		stream = sd.InputStream(
+			device=device_index,
+			samplerate=44100,
+			channels=channels,
+			callback=callback
+		)
+		stream.start()
+
+		# Flip UI state
+		is_recording = True
+		record_btn.config(text="Stop Recording", bootstyle=DANGER)
+	else:
+		stream.stop()
+		stream.close()
+
+		is_recording = False
+		record_btn.config(text="Record & Transcribe", bootstyle=INFO)
+
+		if not recorded_frames:
+			messagebox.showerror("Error", "No audio was captured.")
+
+		import numpy as np
+		audio_data = np.concatenate(recorded_frames, axis=0)
+
 		filename = os.path.join(os.getcwd(), "recorded_audio.wav")
-		recorded_file = record_audio(duration, filename)
-		if recorded_file:
-			entry.delete(0, "end")
-			entry.insert(0, recorded_file)
-			transcribe()
+		write(filename, 44100, audio_data)
+
+		text_box.insert("end", f"Recording saved as {filename}\n")
+
+		entry.delete(0,"end")
+		entry.insert(0,filename)
+
+		transcribe()
 
 def save_transcription():
 	# Save transcription after transcription preview
@@ -99,6 +130,34 @@ def save_transcription():
 			messagebox.showinfo("Success",f"Transcription saved to:\n{save_path}")
 		except Exception as e:
 			messagebox.showerror("Error",f"Failed to save:\n{e}")
+
+def get_input_devices():
+	devices = sd.query_devices()
+	input_devices = []
+
+	for idx, dev in enumerate(devices):
+		if dev["max_input_channels"] > 0:
+			input_devices.append((idx, dev["name"], dev["max_input_channels"]))
+	return input_devices
+
+def choose_input_devices():
+	devices = get_input_devices()
+
+	if not devices:
+		messagebox.showerror("Error", "No audio input devices detected.")
+		return None, None
+
+	devices_list = "\n".join([f"{idx}: {name} ({channels} channels)" for idx, name, channels in devices])
+
+	choice = sdialog.askinteger("Select Input Device", "Available microphones:\n\n" + devices_list + "\n\nEnter device index:", minvalue=0, maxvalue=len(sd.query_devices()) - 1)
+
+	if choice is None:
+		return None, None
+
+	device_info = sd.query_devices(choice)
+
+	return choice, device_info['max_input_channels']
+
 root = ttk.Window(themename="cosmo")
 root.title("Whisper Transcriber")
 
@@ -125,7 +184,7 @@ save_btn = ttk.Button(root, text="Save Transcription", bootstyle=PRIMARY, comman
 save_btn.pack(pady=5)
 save_btn.config(state=DISABLED)
 
-record_btn = ttk.Button(frame, text="Record & Transcribe", bootstyle=INFO, command=record)
+record_btn = ttk.Button(frame, text="Record & Transcribe", bootstyle=INFO, command=record_toggle)
 record_btn.grid(row=2, column=0, columnspan=2, pady=10)
 
 if __name__ == "__main__":
