@@ -27,32 +27,32 @@ deployment were not so memory intensive for the project's dependencies. Possible
  - scipy (Python)
 
 Update list:
-Milestone 1: 
+### Milestone 1: 
 - Team structure and role assignments set up.
 - local readme set up
 - currently using online model framework
-Status Rep 1:
+### Status Rep 1:
 - focus directed towards building front-end for whisper interaction
 - added to dependency list
 - API cost feasibility concerns
-Milestone 2:
+### Milestone 2:
 - reframed as a generalized transcription tool due to hardware constraints in web development.
 - looked at local deployment options
-Status Rep 2:
+### Status Rep 2:
 - officially moved to local deployment for cost concerns
 - designing local app rather than using API means some refactoring and installing of the Whisper model.
 - main functionality works at this step, just refining it.
-Status Rep 3:
+### Status Rep 3:
 - focused on having it work out-of-the-box
 - researched installer approach to remove friction with installing all dependencies required.
 - sculpted usability test plan for testing
-Milestone 3:
+### Milestone 3:
 - usability test plan finished and currently testing
-Status Rep 4:
+### Status Rep 4:
 - finished implementation of installer package
 - added start/stop recording for live recording
 - added device selection(microphone)
-Milestone 4:
+### Milestone 4:
 - added saving of transcription to user-chosen location
 - changed colors and added responsive UI elements
 - added status/error messaging and button enable/disable logic
